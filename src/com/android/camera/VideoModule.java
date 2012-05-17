@@ -1981,6 +1981,7 @@ public class VideoModule implements CameraModule,
                 CameraProfile.QUALITY_HIGH);
         mParameters.setJpegQuality(jpegQuality);
 
+        CameraSettings.dumpParameters(mParameters);
         mActivity.mCameraDevice.setParameters(mParameters);
         // Keep preview size up to date.
         mParameters = mActivity.mCameraDevice.getParameters();
@@ -2489,6 +2490,7 @@ public class VideoModule implements CameraModule,
         mParameters.setRotation(rotation);
         Location loc = mLocationManager.getCurrentLocation();
         Util.setGpsParameters(mParameters, loc);
+        CameraSettings.dumpParameters(mParameters);
         mActivity.mCameraDevice.setParameters(mParameters);
 
         Log.v(TAG, "Video snapshot start");
