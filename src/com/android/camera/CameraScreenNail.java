@@ -68,13 +68,11 @@ public class CameraScreenNail extends SurfaceTextureScreenNail {
     private Object mLock = new Object();
 
     private OnFrameDrawnListener mOneTimeFrameDrawnListener;
+    private float mAspectRatio;
     private int mRenderWidth;
     private int mRenderHeight;
-    // This represents the scaled, uncropped size of the texture
-    // Needed for FaceView
-    private int mUncroppedRenderWidth;
-    private int mUncroppedRenderHeight;
-    private float mScaleX = 1f, mScaleY = 1f;
+    private int mPreviewWidth;
+    private int mPreviewHeight;
     private boolean mFullScreen;
     private boolean mEnableAspectRatioClamping = false;
     private float mAlpha = 1f;
@@ -97,50 +95,16 @@ public class CameraScreenNail extends SurfaceTextureScreenNail {
     }
 
     public void setFullScreen(boolean full) {
-        synchronized (mLock) {
-            mFullScreen = full;
-        }
-    }
-
-    /**
-     * returns the uncropped, but scaled, width of the rendered texture
-     */
-    public int getUncroppedRenderWidth() {
-        return mUncroppedRenderWidth;
-    }
-
-    /**
-     * returns the uncropped, but scaled, width of the rendered texture
-     */
-    public int getUncroppedRenderHeight() {
-        return mUncroppedRenderHeight;
-    }
-
-    @Override
-    public int getWidth() {
-        return mEnableAspectRatioClamping ? mRenderWidth : getTextureWidth();
-    }
-
-    @Override
-    public int getHeight() {
-        return mEnableAspectRatioClamping ? mRenderHeight : getTextureHeight();
-    }
-
-    private int getTextureWidth() {
-        return super.getWidth();
-    }
-
-    private int getTextureHeight() {
-        return super.getHeight();
+        mFullScreen = full;
     }
 
     @Override
     public void setSize(int w, int h) {
         super.setSize(w,  h);
-        mEnableAspectRatioClamping = false;
-        if (mRenderWidth == 0) {
-            mRenderWidth = w;
-            mRenderHeight = h;
+        if (w > h) {
+            mAspectRatio  = (float) w / h;
+        } else {
+            mAspectRatio = (float) h / w;
         }
         updateRenderSize();
     }
@@ -158,44 +122,27 @@ public class CameraScreenNail extends SurfaceTextureScreenNail {
     }
 
     private void setPreviewLayoutSize(int w, int h) {
-        Log.i(TAG, "preview layout size: "+w+"/"+h);
-        mRenderWidth = w;
-        mRenderHeight = h;
+        mPreviewWidth = w;
+        mPreviewHeight = h;
         updateRenderSize();
     }
 
     private void updateRenderSize() {
-        if (!mEnableAspectRatioClamping) {
-            mScaleX = mScaleY = 1f;
-            mUncroppedRenderWidth = getTextureWidth();
-            mUncroppedRenderHeight = getTextureHeight();
-            Log.i(TAG, "aspect ratio clamping disabled");
-            return;
+        // these callbacks above come at different times,
+        // so make sure we have all the data
+        if (mPreviewWidth != 0 && mAspectRatio > 0) {
+            if (mPreviewWidth > mPreviewHeight) {
+                mRenderWidth = Math.max(mPreviewWidth,
+                        (int) (mPreviewHeight * mAspectRatio));
+                mRenderHeight = Math.max(mPreviewHeight,
+                        (int)(mPreviewWidth / mAspectRatio));
+            } else {
+                mRenderWidth = Math.max(mPreviewWidth,
+                        (int) (mPreviewHeight / mAspectRatio));
+                mRenderHeight = Math.max(mPreviewHeight,
+                        (int) (mPreviewWidth * mAspectRatio));
+            }
         }
-
-        float aspectRatio;
-        if (getTextureWidth() > getTextureHeight()) {
-            aspectRatio = (float) getTextureWidth() / (float) getTextureHeight();
-        } else {
-            aspectRatio = (float) getTextureHeight() / (float) getTextureWidth();
-        }
-        float scaledTextureWidth, scaledTextureHeight;
-        if (mRenderWidth > mRenderHeight) {
-            scaledTextureWidth = Math.max(mRenderWidth,
-                    (int) (mRenderHeight * aspectRatio));
-            scaledTextureHeight = Math.max(mRenderHeight,
-                    (int)(mRenderWidth / aspectRatio));
-        } else {
-            scaledTextureWidth = Math.max(mRenderWidth,
-                    (int) (mRenderHeight / aspectRatio));
-            scaledTextureHeight = Math.max(mRenderHeight,
-                    (int) (mRenderWidth * aspectRatio));
-        }
-        mScaleX = mRenderWidth / scaledTextureWidth;
-        mScaleY = mRenderHeight / scaledTextureHeight;
-        mUncroppedRenderWidth = Math.round(scaledTextureWidth);
-        mUncroppedRenderHeight = Math.round(scaledTextureHeight);
-        Log.i(TAG, "aspect ratio clamping enabled, surfaceTexture scale: " + mScaleX + ", " + mScaleY);
     }
 
     @Override
@@ -301,6 +248,13 @@ public class CameraScreenNail extends SurfaceTextureScreenNail {
 
             switch (mAnimState) {
                 case ANIM_NONE:
+                    if (mFullScreen && (mRenderWidth != 0)) {
+                        // overscale image to make it fullscreen
+                        x = (x + width / 2) - mRenderWidth / 2;
+                        y = (y + height / 2) - mRenderHeight / 2;
+                        width = mRenderWidth;
+                        height = mRenderHeight;
+                    }
                     super.draw(canvas, x, y, width, height);
                     break;
                 case ANIM_SWITCH_COPY_TEXTURE:
@@ -326,6 +280,13 @@ public class CameraScreenNail extends SurfaceTextureScreenNail {
                 case ANIM_CAPTURE_START:
                     copyPreviewTexture(canvas);
                     mListener.onCaptureTextureCopied();
+                    if (mRenderWidth > 0) {
+                        // overscale image to make it fullscreen
+                        x = (x + width / 2) - mRenderWidth / 2;
+                        y = (y + height / 2) - mRenderHeight / 2;
+                        width = mRenderWidth;
+                        height = mRenderHeight;
+                    }
                     mCaptureAnimManager.startAnimation(x, y, width, height);
                     mAnimState = ANIM_CAPTURE_RUNNING;
                     break;
@@ -350,6 +311,13 @@ public class CameraScreenNail extends SurfaceTextureScreenNail {
                     // Continue to the normal draw procedure if the animation is
                     // not drawn.
                     mAnimState = ANIM_NONE;
+                    if (mRenderWidth != 0) {
+                        // overscale image to make it fullscreen
+                        x = (x + width / 2) - mRenderWidth / 2;
+                        y = (y + height / 2) - mRenderHeight / 2;
+                        width = mRenderWidth;
+                        height = mRenderHeight;
+                    }
                     super.draw(canvas, x, y, width, height);
                 }
             }

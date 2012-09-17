@@ -63,8 +63,8 @@ import java.util.List;
 import java.util.StringTokenizer;
 
 /**
- * Collection of utility functions used in this package.
- */
+* Collection of utility functions used in this package.
+*/
 public class Util {
     private static final String TAG = "Util";
 
@@ -142,11 +142,19 @@ public class Util {
     // For setting video size before recording starts
     private static boolean sEarlyVideoSize;
 
+    // For setting video desired profile size
+    private static boolean sProfileVideoSize;
+
     // Samsung ZSL mode
     private static boolean sEnableZSL;
 
     // Workaround for QC cameras with broken face detection on front camera
     private static boolean sNoFaceDetectOnFrontCamera;
+
+    // Software HDR based on manual shots with multiple exposure
+    private static boolean sEnableSoftwareHDR;
+    private static boolean sDoSoftwareHDRShot;
+    private static int sSoftwareHDRExposureSettleTime;
 
     private Util() {
     }
@@ -163,10 +171,16 @@ public class Util {
         // These come from the config, but are needed before parameters are set.
         sSamsungCamMode = context.getResources().getBoolean(R.bool.needsSamsungCamMode);
         sHTCCamMode = context.getResources().getBoolean(R.bool.needsHTCCamMode);
+        sProfileVideoSize = context.getResources().getBoolean(R.bool.useProfileVideoSize);
         sEarlyVideoSize = context.getResources().getBoolean(R.bool.needsEarlyVideoSize);
         sEnableZSL = context.getResources().getBoolean(R.bool.enableZSL);
         sNoFaceDetectOnFrontCamera = context.getResources().getBoolean(
                 R.bool.noFaceDetectOnFrontCamera);
+
+        sEnableSoftwareHDR = !context.getResources().getBoolean(R.bool.disableSoftwareHDR);
+        sSoftwareHDRExposureSettleTime = context.getResources().getInteger(
+                R.integer.softwareHDRExposureSettleTime);
+        sDoSoftwareHDRShot = false;
     }
 
     public static int dpToPixel(int dp) {
@@ -181,12 +195,32 @@ public class Util {
         return sSamsungCamMode;
     }
 
+    public static boolean useProfileVideoSize() {
+        return sProfileVideoSize;
+    }
+
     public static boolean needsEarlyVideoSize() {
         return sEarlyVideoSize;
     }
 
     public static boolean enableZSL() {
         return sEnableZSL;
+    }
+
+    public static boolean useSoftwareHDR() {
+        return sEnableSoftwareHDR;
+    }
+
+    public static void setDoSoftwareHDRShot(boolean enable) {
+        sDoSoftwareHDRShot = enable;
+    }
+
+    public static boolean getDoSoftwareHDRShot() {
+        return sDoSoftwareHDRShot;
+    }
+
+    public static int getSoftwareHDRExposureSettleTime() {
+        return sSoftwareHDRExposureSettleTime;
     }
 
     public static boolean noFaceDetectOnFrontCamera() {
@@ -238,24 +272,24 @@ public class Util {
     }
 
     /*
-     * Compute the sample size as a function of minSideLength
-     * and maxNumOfPixels.
-     * minSideLength is used to specify that minimal width or height of a
-     * bitmap.
-     * maxNumOfPixels is used to specify the maximal size in pixels that is
-     * tolerable in terms of memory usage.
-     *
-     * The function returns a sample size based on the constraints.
-     * Both size and minSideLength can be passed in as -1
-     * which indicates no care of the corresponding constraint.
-     * The functions prefers returning a sample size that
-     * generates a smaller bitmap, unless minSideLength = -1.
-     *
-     * Also, the function rounds up the sample size to a power of 2 or multiple
-     * of 8 because BitmapFactory only honors sample size this way.
-     * For example, BitmapFactory downsamples an image by 2 even though the
-     * request is 3. So we round up the sample size to avoid OOM.
-     */
+* Compute the sample size as a function of minSideLength
+* and maxNumOfPixels.
+* minSideLength is used to specify that minimal width or height of a
+* bitmap.
+* maxNumOfPixels is used to specify the maximal size in pixels that is
+* tolerable in terms of memory usage.
+*
+* The function returns a sample size based on the constraints.
+* Both size and minSideLength can be passed in as -1
+* which indicates no care of the corresponding constraint.
+* The functions prefers returning a sample size that
+* generates a smaller bitmap, unless minSideLength = -1.
+*
+* Also, the function rounds up the sample size to a power of 2 or multiple
+* of 8 because BitmapFactory only honors sample size this way.
+* For example, BitmapFactory downsamples an image by 2 even though the
+* request is 3. So we round up the sample size to avoid OOM.
+*/
     public static int computeSampleSize(BitmapFactory.Options options,
             int minSideLength, int maxNumOfPixels) {
         int initialSize = computeInitialSampleSize(options, minSideLength,
@@ -437,8 +471,8 @@ public class Util {
         int result;
         if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
             result = (info.orientation + degrees) % 360;
-            result = (360 - result) % 360;  // compensate the mirror
-        } else {  // back-facing
+            result = (360 - result) % 360; // compensate the mirror
+        } else { // back-facing
             result = (info.orientation - degrees + 360) % 360;
         }
         return result;
@@ -558,8 +592,8 @@ public class Util {
     }
 
     /**
-     * Returns whether the device is voice-capable (meaning, it can do MMS).
-     */
+* Returns whether the device is voice-capable (meaning, it can do MMS).
+*/
     public static boolean isMmsCapable(Context context) {
         TelephonyManager telephonyManager = (TelephonyManager)
                 context.getSystemService(Context.TELEPHONY_SERVICE);
@@ -741,7 +775,7 @@ public class Util {
             CameraInfo info = CameraHolder.instance().getCameraInfo()[cameraId];
             if (info.facing == CameraInfo.CAMERA_FACING_FRONT) {
                 rotation = (info.orientation - orientation + 360) % 360;
-            } else {  // back-facing camera
+            } else { // back-facing camera
                 rotation = (info.orientation + orientation) % 360;
             }
         }

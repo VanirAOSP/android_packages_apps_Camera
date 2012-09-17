@@ -36,32 +36,31 @@ import java.util.ArrayList;
 import java.util.List;
 
 /* A class that handles everything about focus in still picture mode.
- * This also handles the metering area because it is the same as focus area.
- *
- * The test cases:
- * (1) The camera has continuous autofocus. Move the camera. Take a picture when
- *     CAF is not in progress.
- * (2) The camera has continuous autofocus. Move the camera. Take a picture when
- *     CAF is in progress.
- * (3) The camera has face detection. Point the camera at some faces. Hold the
- *     shutter. Release to take a picture.
- * (4) The camera has face detection. Point the camera at some faces. Single tap
- *     the shutter to take a picture.
- * (5) The camera has autofocus. Single tap the shutter to take a picture.
- * (6) The camera has autofocus. Hold the shutter. Release to take a picture.
- * (7) The camera has no autofocus. Single tap the shutter and take a picture.
- * (8) The camera has autofocus and supports focus area. Touch the screen to
- *     trigger autofocus. Take a picture.
- * (9) The camera has autofocus and supports focus area. Touch the screen to
- *     trigger autofocus. Wait until it times out.
- * (10) The camera has no autofocus and supports metering area. Touch the screen
- *     to change metering area.
- */
+* This also handles the metering area because it is the same as focus area.
+*
+* The test cases:
+* (1) The camera has continuous autofocus. Move the camera. Take a picture when
+* CAF is not in progress.
+* (2) The camera has continuous autofocus. Move the camera. Take a picture when
+* CAF is in progress.
+* (3) The camera has face detection. Point the camera at some faces. Hold the
+* shutter. Release to take a picture.
+* (4) The camera has face detection. Point the camera at some faces. Single tap
+* the shutter to take a picture.
+* (5) The camera has autofocus. Single tap the shutter to take a picture.
+* (6) The camera has autofocus. Hold the shutter. Release to take a picture.
+* (7) The camera has no autofocus. Single tap the shutter and take a picture.
+* (8) The camera has autofocus and supports focus area. Touch the screen to
+* trigger autofocus. Take a picture.
+* (9) The camera has autofocus and supports focus area. Touch the screen to
+* trigger autofocus. Wait until it times out.
+* (10) The camera has no autofocus and supports metering area. Touch the screen
+* to change metering area.
+*/
 public class FocusOverlayManager {
     private static final String TAG = "CAM_FocusManager";
 
     private static final int RESET_TOUCH_FOCUS = 0;
-    private static final int RESET_TOUCH_FOCUS_DELAY = 3000;
 
     private int mState = STATE_IDLE;
     private static final int STATE_IDLE = 0; // Focus is not active.
@@ -94,6 +93,8 @@ public class FocusOverlayManager {
     private ComboPreferences mPreferences;
     private Handler mHandler;
     Listener mListener;
+
+    private int mFocusTime; // time after touch-to-focus
 
     public interface Listener {
         public void autoFocus();
@@ -253,6 +254,11 @@ public class FocusOverlayManager {
         }
     }
 
+    // set touch-to-focus duration
+    public void setFocusTime(int time) {
+        mFocusTime = time;
+    }
+
     public void onAutoFocus(boolean focused, boolean shutterButtonPressed) {
         if (mState == STATE_FOCUSING_SNAP_ON_FINISH) {
             // Take the picture no matter focus succeeds or fails. No need
@@ -277,8 +283,8 @@ public class FocusOverlayManager {
             updateFocusUI();
             // If this is triggered by touch focus, cancel focus after a
             // while.
-            if (mFocusArea != null) {
-                mHandler.sendEmptyMessageDelayed(RESET_TOUCH_FOCUS, RESET_TOUCH_FOCUS_DELAY);
+            if ((mFocusArea != null) && (mFocusTime != 0)) {
+                mHandler.sendEmptyMessageDelayed(RESET_TOUCH_FOCUS, mFocusTime);
             }
             if (shutterButtonPressed) {
                 // Lock AE & AWB so users can half-press shutter and recompose.
@@ -373,11 +379,12 @@ public class FocusOverlayManager {
         mListener.setFocusParameters();
         if (mFocusAreaSupported) {
             autoFocus();
-        } else {  // Just show the indicator in all other cases.
+        } else { // Just show the indicator in all other cases.
             updateFocusUI();
-            // Reset the metering area in 3 seconds.
             mHandler.removeMessages(RESET_TOUCH_FOCUS);
-            mHandler.sendEmptyMessageDelayed(RESET_TOUCH_FOCUS, RESET_TOUCH_FOCUS_DELAY);
+            if (mFocusTime != 0) {
+                mHandler.sendEmptyMessageDelayed(RESET_TOUCH_FOCUS, mFocusTime);
+            }
         }
     }
 

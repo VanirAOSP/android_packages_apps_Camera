@@ -110,10 +110,10 @@ public class VideoModule implements CameraModule,
     private static final long SHUTTER_BUTTON_TIMEOUT = 500L; // 500ms
 
     /**
-     * An unpublished intent flag requesting to start recording straight away
-     * and return as soon as recording is stopped.
-     * TODO: consider publishing by moving into MediaStore.
-     */
+* An unpublished intent flag requesting to start recording straight away
+* and return as soon as recording is stopped.
+* TODO: consider publishing by moving into MediaStore.
+*/
     private static final String EXTRA_QUICK_CAPTURE =
             "android.intent.extra.quickCapture";
 
@@ -229,11 +229,14 @@ public class VideoModule implements CameraModule,
     // The degrees of the device rotated clockwise from its natural orientation.
     private int mOrientation = OrientationEventListener.ORIENTATION_UNKNOWN;
 
-    private int mZoomValue;  // The current zoom value.
+    private int mZoomValue; // The current zoom value.
     private int mZoomMax;
     private List<Integer> mZoomRatios;
-    private boolean mRestoreFlash;  // This is used to check if we need to restore the flash
+    private boolean mRestoreFlash; // This is used to check if we need to restore the flash
                                     // status when going back from gallery.
+
+    private int mVideoWidth;
+    private int mVideoHeight;
 
     protected class CameraOpenThread extends Thread {
         @Override
@@ -357,13 +360,13 @@ public class VideoModule implements CameraModule,
 
     private void initializeSurfaceView() {
         mPreviewSurfaceView = (PreviewSurfaceView) mRootView.findViewById(R.id.preview_surface_view);
-        if (!ApiHelper.HAS_SURFACE_TEXTURE) {  // API level < 11
+        if (!ApiHelper.HAS_SURFACE_TEXTURE) { // API level < 11
             if (mSurfaceViewCallback == null) {
                 mSurfaceViewCallback = new SurfaceViewCallback();
             }
             mPreviewSurfaceView.getHolder().addCallback(mSurfaceViewCallback);
             mPreviewSurfaceView.setVisibility(View.VISIBLE);
-        } else if (!ApiHelper.HAS_SURFACE_TEXTURE_RECORDING) {  // API level < 16
+        } else if (!ApiHelper.HAS_SURFACE_TEXTURE_RECORDING) { // API level < 16
             if (mSurfaceViewCallback == null) {
                 mSurfaceViewCallback = new SurfaceViewCallback();
                 mFrameDrawnListener = new CameraScreenNail.OnFrameDrawnListener() {
@@ -430,9 +433,9 @@ public class VideoModule implements CameraModule,
         mActivity.initPowerShutter(mPreferences);
 
         /*
-         * To reduce startup time, we start the preview in another thread.
-         * We make sure the preview is started at the end of onCreate.
-         */
+* To reduce startup time, we start the preview in another thread.
+* We make sure the preview is started at the end of onCreate.
+*/
         CameraOpenThread cameraOpenThread = new CameraOpenThread();
         cameraOpenThread.start();
 
@@ -720,7 +723,7 @@ public class VideoModule implements CameraModule,
                     intent.getIntExtra(MediaStore.EXTRA_VIDEO_QUALITY, 0);
             if (extraVideoQuality > 0) {
                 quality = CamcorderProfile.QUALITY_HIGH;
-            } else {  // 0 is mms.
+            } else { // 0 is mms.
                 quality = CamcorderProfile.QUALITY_LOW;
             }
         }
@@ -761,7 +764,7 @@ public class VideoModule implements CameraModule,
         getDesiredPreviewSize();
     }
 
-    private void writeDefaultEffectToPrefs()  {
+    private void writeDefaultEffectToPrefs() {
         ComboPreferences.Editor editor = mPreferences.edit();
         editor.putString(CameraSettings.KEY_VIDEO_EFFECT,
                 mActivity.getString(R.string.pref_video_effect_default));
@@ -772,13 +775,13 @@ public class VideoModule implements CameraModule,
     private void getDesiredPreviewSize() {
         mParameters = mActivity.mCameraDevice.getParameters();
         if (ApiHelper.HAS_GET_SUPPORTED_VIDEO_SIZE) {
-            if (mParameters.getSupportedVideoSizes() == null || effectsActive()) {
+            if (mParameters.getSupportedVideoSizes() == null || (!mActivity.getResources().getBoolean(R.bool.usePreferredPreviewSizeForEffects) && effectsActive()) || Util.useProfileVideoSize()) {
                 mDesiredPreviewWidth = mProfile.videoFrameWidth;
                 mDesiredPreviewHeight = mProfile.videoFrameHeight;
-            } else {  // Driver supports separates outputs for preview and video.
+            } else { // Driver supports separates outputs for preview and video.
                 List<Size> sizes = mParameters.getSupportedPreviewSizes();
                 Size preferred = mParameters.getPreferredPreviewSizeForVideo();
-                if (preferred == null) {
+                if (mActivity.getResources().getBoolean(R.bool.ignorePreferredPreviewSizeForVideo) || preferred == null) {
                     preferred = sizes.get(0);
                 }
                 int product = preferred.width * preferred.height;
@@ -1087,6 +1090,18 @@ public class VideoModule implements CameraModule,
             case KeyEvent.KEYCODE_MENU:
                 if (mMediaRecorderRecording) return true;
                 break;
+            case KeyEvent.KEYCODE_VOLUME_UP:
+                if (mParameters.isZoomSupported() && mZoomRenderer != null) {
+                    int index = mZoomValue + 1;
+                    processZoomValueChanged(index);
+                }
+                return true;
+            case KeyEvent.KEYCODE_VOLUME_DOWN:
+                if (mParameters.isZoomSupported() && mZoomRenderer != null) {
+                    int index = mZoomValue - 1;
+                    processZoomValueChanged(index);
+                }
+                return true;
         }
         return false;
     }
@@ -1102,6 +1117,12 @@ public class VideoModule implements CameraModule,
                     onShutterButtonClick();
                 }
                 return true;
+            case KeyEvent.KEYCODE_VOLUME_UP:
+            case KeyEvent.KEYCODE_VOLUME_DOWN:
+                if (mParameters.isZoomSupported() && mZoomRenderer != null) {
+                    return true;
+                }
+                break;
         }
         return false;
     }
@@ -1176,6 +1197,9 @@ public class VideoModule implements CameraModule,
         Intent intent = mActivity.getIntent();
         Bundle myExtras = intent.getExtras();
 
+        mVideoWidth = mProfile.videoFrameWidth;
+        mVideoHeight = mProfile.videoFrameHeight;
+
         long requestedSizeLimit = 0;
         closeVideoFileDescriptor();
         if (mIsVideoCaptureIntent && myExtras != null) {
@@ -1246,7 +1270,7 @@ public class VideoModule implements CameraModule,
             CameraInfo info = CameraHolder.instance().getCameraInfo()[mCameraId];
             if (info.facing == CameraInfo.CAMERA_FACING_FRONT) {
                 rotation = (info.orientation - mOrientation + 360) % 360;
-            } else {  // back-facing camera
+            } else { // back-facing camera
                 rotation = (info.orientation + mOrientation) % 360;
             }
         }
@@ -1444,7 +1468,7 @@ public class VideoModule implements CameraModule,
                 mActivity.addSecureAlbumItemIfNeeded(true, mCurrentVideoUri);
 
                 // Rename the video file to the final name. This avoids other
-                // apps reading incomplete data.  We need to do it after the
+                // apps reading incomplete data. We need to do it after the
                 // above mVideoNamer.getUri() call, so we are certain that the
                 // previous insert to MediaProvider is completed.
                 String finalName = mCurrentVideoValues.getAsString(
@@ -1534,9 +1558,9 @@ public class VideoModule implements CameraModule,
     }
 
     /*
-     * Make sure we're not recording music playing in the background, ask the
-     * MediaPlaybackService to pause playback.
-     */
+* Make sure we're not recording music playing in the background, ask the
+* MediaPlaybackService to pause playback.
+*/
     private void pauseAudioPlayback() {
         // Shamelessly copied from MediaPlaybackService.java, which
         // should be public, but isn't.
@@ -1720,7 +1744,7 @@ public class VideoModule implements CameraModule,
                 Log.v(TAG, "stopVideoRecording: Setting current video filename: "
                         + mCurrentVideoFilename);
             } catch (RuntimeException e) {
-                Log.e(TAG, "stop fail",  e);
+                Log.e(TAG, "stop fail", e);
                 if (mVideoFilename != null) deleteVideoFile(mVideoFilename);
                 fail = true;
             }
@@ -2261,7 +2285,9 @@ public class VideoModule implements CameraModule,
             // We need to restart the preview if preview size is changed.
             Size size = mParameters.getPreviewSize();
             if (size.width != mDesiredPreviewWidth
-                    || size.height != mDesiredPreviewHeight) {
+                    || size.height != mDesiredPreviewHeight
+                    || mProfile.videoFrameWidth != mVideoWidth
+                    || mProfile.videoFrameHeight != mVideoHeight) {
                 if (!effectsActive()) {
                     stopPreview();
                 } else {
@@ -2414,17 +2440,24 @@ public class VideoModule implements CameraModule,
         return false;
     }
 
-    private class ZoomChangeListener implements ZoomRenderer.OnZoomChangedListener {
-        @Override
-        public void onZoomValueChanged(int value) {
+    private void processZoomValueChanged(int index) {
+        if (index >= 0 && index <= mZoomMax) {
+            mZoomRenderer.setZoom(index);
             // Not useful to change zoom value when the activity is paused.
             if (mPaused) return;
-            mZoomValue = value;
+            mZoomValue = index;
             // Set zoom parameters asynchronously
             mParameters.setZoom(mZoomValue);
             mActivity.mCameraDevice.setParametersAsync(mParameters);
             Parameters p = mActivity.mCameraDevice.getParameters();
             mZoomRenderer.setZoomValue(mZoomRatios.get(p.getZoom()));
+        }
+    }
+
+    private class ZoomChangeListener implements ZoomRenderer.OnZoomChangedListener {
+        @Override
+        public void onZoomValueChanged(int index) {
+            processZoomValueChanged(index);
         }
 
         @Override
@@ -2481,7 +2514,7 @@ public class VideoModule implements CameraModule,
             return;
         }
 
-        if (!mPaused || mSnapshotInProgress || effectsActive()
+        if (mPaused || mSnapshotInProgress || effectsActive()
                 || !Util.isVideoSnapshotSupported(mParameters)) {
             return;
         }

@@ -178,9 +178,6 @@ public class FaceView extends View implements FocusIndicator, Rotatable {
     @Override
     protected void onDraw(Canvas canvas) {
         if (!mBlocked && (mFaces != null) && (mFaces.length > 0)) {
-            final CameraScreenNail sn = ((CameraActivity) getContext()).getCameraScreenNail();
-            int rw = sn.getUncroppedRenderWidth();
-            int rh = sn.getUncroppedRenderHeight();
             // Prepare the matrix.
             if (((rh > rw) && ((mDisplayOrientation == 0) || (mDisplayOrientation == 180)))
                     || ((rw > rh) && ((mDisplayOrientation == 90) || (mDisplayOrientation == 270)))) {

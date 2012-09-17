@@ -65,6 +65,11 @@ public class RenderOverlay extends FrameLayout {
         }
     }
 
+    @Override
+    public void setOrientation(int orientation, boolean animation) {
+        super.setOrientation(orientation, animation);
+    }
+
     public void addRenderer(int pos, Renderer renderer) {
         mClients.add(pos, renderer);
         renderer.setOverlay(this);

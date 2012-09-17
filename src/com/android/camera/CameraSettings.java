@@ -53,6 +53,7 @@ public class CameraSettings {
     public static final String KEY_PICTURE_SIZE = "pref_camera_picturesize_key";
     public static final String KEY_JPEG_QUALITY = "pref_camera_jpegquality_key";
     public static final String KEY_FOCUS_MODE = "pref_camera_focusmode_key";
+    public static final String KEY_FOCUS_TIME = "pref_camera_focustime_key";
     public static final String KEY_FLASH_MODE = "pref_camera_flashmode_key";
     public static final String KEY_VIDEOCAMERA_FLASH_MODE = "pref_camera_video_flashmode_key";
     public static final String KEY_WHITE_BALANCE = "pref_camera_whitebalance_key";
@@ -235,7 +236,8 @@ public class CameraSettings {
             }
         }
         if (cameraHdr != null && (!ApiHelper.HAS_CAMERA_HDR
-                    || !Util.isCameraHdrSupported(mParameters))) {
+                    || !Util.isCameraHdrSupported(mParameters))
+                    && !Util.useSoftwareHDR()) {
             removePreference(group, cameraHdr.getKey());
         }
         if (isoMode != null) {
@@ -259,8 +261,10 @@ public class CameraSettings {
         float step = mParameters.getExposureCompensationStep();
 
         // show only integer values for exposure compensation
-        int maxValue = (int) FloatMath.floor(max * step);
-        int minValue = (int) FloatMath.ceil(min * step);
+        // Limit values to -5..5 due to the limitation in the icon
+        // resource array
+        int maxValue = Math.min((int) FloatMath.floor(max * step), 5);
+        int minValue = Math.max((int) FloatMath.ceil(min * step), -5);
         CharSequence entries[] = new CharSequence[maxValue - minValue + 1];
         CharSequence entryValues[] = new CharSequence[maxValue - minValue + 1];
         int[] icons = new int[maxValue - minValue + 1];

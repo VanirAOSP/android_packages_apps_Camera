@@ -19,16 +19,24 @@
     android:layout_height="match_parent" >
 
     <View
-        android:id="@+id/controls"
-        style="@style/CameraControls"
-        android:layout_alignParentBottom="true"
-        android:layout_centerHorizontal="true" />
+        android:layout_height="1dip"
+        android:layout_width="match_parent"
+        android:layout_alignTop="@+id/camera_switcher"
+        android:background="#5AF5F5F5" />
+
+    <View
+        android:id="@+id/blocker"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/switcher_size"
+        android:clickable="true"
+        android:layout_alignParentBottom="true" />
 
     <com.android.camera.ShutterButton
         android:id="@+id/shutter_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
+        android:layout_marginBottom="-12dip"
         android:layout_centerHorizontal="true"
         android:layout_marginBottom="@dimen/shutter_offset"
         android:clickable="true"
@@ -40,8 +48,26 @@
     <com.android.camera.ui.CameraSwitcher
         android:id="@+id/camera_switcher"
         style="@style/SwitcherButton"
+        android:layout_alignParentLeft="true"
         android:layout_alignParentBottom="true"
-        android:layout_alignLeft="@id/controls"
+        android:layout_marginBottom="2dip" />
+
+    <ImageView
+        android:id="@+id/shutter_overlay"
+        style="@style/SwitcherButton"
+        android:background="@null"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="8dip"
+        android:scaleType="center" />
+
+    <com.android.camera.ui.RotateImageView
+        android:id="@+id/menu"
+        style="@style/SwitcherButton"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentRight="true"
         android:layout_marginBottom="2dip"
-        android:contentDescription="@string/accessibility_mode_picker" />
+        android:src="@drawable/ic_menu_overflow_large"
+        android:scaleType="center" />
+
 </RelativeLayout>

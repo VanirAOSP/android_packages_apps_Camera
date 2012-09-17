@@ -19,6 +19,7 @@ package com.android.camera;
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.ProgressDialog;
 import android.content.ContentProviderClient;
 import android.content.ContentResolver;
 import android.content.DialogInterface;
@@ -149,7 +150,7 @@ public class PhotoModule
 
     private static final int SCREEN_DELAY = 2 * 60 * 1000;
 
-    private int mZoomValue;  // The current zoom value.
+    private int mZoomValue; // The current zoom value.
     private int mZoomMax;
     private List<Integer> mZoomRatios;
 
@@ -217,11 +218,11 @@ public class PhotoModule
     private final Object[] mFormatterArgs = new Object[1];
 
     /**
-     * An unpublished intent flag requesting to return as soon as capturing
-     * is completed.
-     *
-     * TODO: consider publishing by moving into MediaStore.
-     */
+* An unpublished intent flag requesting to return as soon as capturing
+* is completed.
+*
+* TODO: consider publishing by moving into MediaStore.
+*/
     private static final String EXTRA_QUICK_CAPTURE =
             "android.intent.extra.quickCapture";
 
@@ -238,7 +239,7 @@ public class PhotoModule
     private boolean mIsImageCaptureIntent;
 
     private static final int PREVIEW_STOPPED = 0;
-    private static final int IDLE = 1;  // preview is active
+    private static final int IDLE = 1; // preview is active
     // Focus is in progress. The exact focus state is in Focus.java.
     private static final int FOCUSING = 2;
     private static final int SNAPSHOT_IN_PROGRESS = 3;
@@ -299,6 +300,13 @@ public class PhotoModule
     private int mBurstShotsDone = 0;
     private boolean mBurstShotInProgress = false;
 
+    // Software HDR mode
+    private boolean mHDRShotInProgress = false;
+    private boolean mHDRExposureSet = false;
+    private boolean mHDRRendering = false;
+    private ProgressDialog mHdrProgressDialog = null;
+    private static ArrayList<Uri> sHDRShotsPaths = new ArrayList<Uri>();
+
     private boolean mQuickCapture;
 
     CameraStartUpThread mCameraStartUpThread;
@@ -345,9 +353,9 @@ public class PhotoModule
     }
 
     /**
-     * This Handler is used to post message back onto the main thread of the
-     * application
-     */
+* This Handler is used to post message back onto the main thread of the
+* application
+*/
     private class MainHandler extends Handler {
         @Override
         public void handleMessage(Message msg) {
@@ -589,6 +597,7 @@ public class PhotoModule
         updateSceneModeUI();
     }
 
+
     private void resetExposureCompensation() {
         String value = mPreferences.getString(CameraSettings.KEY_EXPOSURE,
                 CameraSettings.EXPOSURE_DEFAULT_VALUE);
@@ -677,9 +686,9 @@ public class PhotoModule
         }
     }
 
-    private class ZoomChangeListener implements ZoomRenderer.OnZoomChangedListener {
-        @Override
-        public void onZoomValueChanged(int index) {
+    private void processZoomValueChanged(int index) {
+        if (index >= 0 && index <= mZoomMax) {
+            mZoomRenderer.setZoom(index);
             // Not useful to change zoom value when the activity is paused.
             if (mPaused) return;
             mZoomValue = index;
@@ -691,6 +700,13 @@ public class PhotoModule
                 Parameters p = mCameraDevice.getParameters();
                 mZoomRenderer.setZoomValue(mZoomRatios.get(p.getZoom()));
             }
+        }
+    }
+
+    private class ZoomChangeListener implements ZoomRenderer.OnZoomChangedListener {
+        @Override
+        public void onZoomValueChanged(int index) {
+            processZoomValueChanged(index);
         }
 
         @Override
@@ -859,7 +875,7 @@ public class PhotoModule
         if (mHdrIndicator == null) {
             return;
         }
-        if ((value != null) && Parameters.SCENE_MODE_HDR.equals(value)) {
+        if ((value != null) && (Parameters.SCENE_MODE_HDR.equals(value) || Util.getDoSoftwareHDRShot())) {
             mHdrIndicator.setImageResource(R.drawable.ic_indicator_hdr_on);
         } else {
             mHdrIndicator.setImageResource(R.drawable.ic_indicator_hdr_off);
@@ -1075,7 +1091,7 @@ public class PhotoModule
             r.data = data;
             r.uri = uri;
             r.title = title;
-            r.loc = (loc == null) ? null : new Location(loc);  // make a copy
+            r.loc = (loc == null) ? null : new Location(loc); // make a copy
             r.width = width;
             r.height = height;
             r.orientation = orientation;
@@ -1088,7 +1104,7 @@ public class PhotoModule
                     }
                 }
                 mQueue.add(r);
-                notifyAll();  // Tell saver thread there is new work to do.
+                notifyAll(); // Tell saver thread there is new work to do.
             }
         }
 
@@ -1099,7 +1115,7 @@ public class PhotoModule
                 SaveRequest r;
                 synchronized (this) {
                     if (mQueue.isEmpty()) {
-                        notifyAll();  // notify main thread in waitDone
+                        notifyAll(); // notify main thread in waitDone
 
                         // Note that we can only stop after we saved all images
                         // in the queue.
@@ -1118,7 +1134,7 @@ public class PhotoModule
                         r.orientation);
                 synchronized (this) {
                     mQueue.remove(0);
-                    notifyAll();  // the main thread may wait in addImage
+                    notifyAll(); // the main thread may wait in addImage
                 }
             }
         }
@@ -1244,6 +1260,7 @@ public class PhotoModule
         private void generateUri() {
             mTitle = Util.createJpegName(mDateTaken);
             mUri = Storage.newImage(mResolver, mTitle, mDateTaken, mWidth, mHeight);
+            sHDRShotsPaths.add(mUri);
         }
 
         // Runs in namer thread
@@ -1430,12 +1447,12 @@ public class PhotoModule
     private void overrideCameraSettings(final String flashMode,
             final String whiteBalance, final String focusMode) {
         if (mPhotoControl != null) {
-//            mPieControl.enableFilter(true);
+// mPieControl.enableFilter(true);
             mPhotoControl.overrideSettings(
                     CameraSettings.KEY_FLASH_MODE, flashMode,
                     CameraSettings.KEY_WHITE_BALANCE, whiteBalance,
                     CameraSettings.KEY_FOCUS_MODE, focusMode);
-//            mPieControl.enableFilter(false);
+// mPieControl.enableFilter(false);
         }
     }
 
@@ -1518,7 +1535,7 @@ public class PhotoModule
         byte[] data = mJpegImageData;
 
         if (mCropValue == null) {
-            // First handle the no crop case -- just return the value.  If the
+            // First handle the no crop case -- just return the value. If the
             // caller specifies a "save uri" then write the data to its
             // stream. Otherwise, pass back a scaled down version of the bitmap
             // directly in the extras.
@@ -1618,6 +1635,120 @@ public class PhotoModule
     public void onShutterButtonClick() {
         int nbBurstShots = Integer.valueOf(mPreferences.getString(CameraSettings.KEY_BURST_MODE, "1"));
 
+        if (Util.getDoSoftwareHDRShot() && !mHDRShotInProgress && !mHDRRendering) {
+            Log.d(TAG, "Starting HDR shot - set min exposure");
+            mParameters.setExposureCompensation(mParameters.getMinExposureCompensation());
+            mCameraDevice.setParameters(mParameters);
+            mHDRShotInProgress = true;
+            sHDRShotsPaths.clear();
+
+            // We hide controls while we are shooting
+            mActivity.hideSwitcher();
+            mActivity.setSwipingEnabled(false);
+
+
+            // We queue the shot so exposure gets set
+            mHandler.postDelayed(new Runnable() {
+                public void run() {
+                    mHDRExposureSet = true;
+                    onShutterButtonClick();
+                }
+            }, 1000);
+            return;
+        }
+        else if (Util.getDoSoftwareHDRShot() && mHDRShotInProgress && !mHDRExposureSet) {
+            // We do min, 0, max exposure shots
+            int value = mParameters.getExposureCompensation();
+            int max = mParameters.getMaxExposureCompensation();
+
+            // Non-ZSL devices hates setting parameters while shot is being taken. We
+            // use SnapshotOnIdle as a callback when a shot is ready to be taken, and
+            // we manually queue another shot.
+            boolean queueShot = false;
+
+            if (mParameters.getMinExposureCompensation() == value) {
+                mParameters.setExposureCompensation(0);
+                Log.d(TAG, "HDR - Set exposure to 0");
+                mCameraDevice.setParameters(mParameters);
+                queueShot = true;
+                mHDRExposureSet = true;
+            } else if (value == 0) {
+                mParameters.setExposureCompensation(mParameters.getMaxExposureCompensation());
+                Log.d(TAG, "HDR - Set exposure to max");
+                mCameraDevice.setParameters(mParameters);
+                queueShot = true;
+                mHDRExposureSet = true;
+            } else {
+                // We did all exposures the sensor is capable of, we stop HDR shot
+                mHDRShotInProgress = false;
+                mHDRRendering = true;
+                mSnapshotOnIdle = false;
+                Log.d(TAG, "Done shooting all exposures, computing HDR");
+
+                // We release controls
+                mActivity.showSwitcher();
+                mActivity.setSwipingEnabled(true);
+
+                // And we compute the final image
+                final HdrSoftwareProcessor hdr = new HdrSoftwareProcessor(mActivity);
+
+                mHdrProgressDialog = ProgressDialog.show(mActivity, mActivity.getString(R.string.pref_camera_scenemode_entry_hdr), mActivity.getString(R.string.wait), true);
+
+                // Let a second for the shot to get recorded on SDcard, then go!
+                mHandler.postDelayed(new Runnable() {
+                    public void run() {
+                        new Thread() {
+                            public void run() {
+                                Uri[] strArray = new Uri[sHDRShotsPaths.size()];
+                                sHDRShotsPaths.toArray(strArray);
+
+                                try {
+                                    Size s = mParameters.getPictureSize();
+                                    mImageNamer.prepareUri(mContentResolver, mCaptureStartTime, s.width, s.height, mJpegRotation);
+                                    hdr.prepare(mActivity, strArray);
+
+                                    byte[] jpegData = hdr.computeHDR(mActivity);
+
+                                    Uri uri = mImageNamer.getUri();
+                                    mActivity.addSecureAlbumItemIfNeeded(false, uri);
+                                    String title = mImageNamer.getTitle();
+                                    mImageSaver.addImage(jpegData, uri, title, mLocationManager.getCurrentLocation(),
+                                        s.width, s.height, 0);
+
+                                } catch (Exception e) {
+                                    Log.e(TAG, "Could not make HDR final shot: " + e.getMessage());
+                                }
+
+                                // delete source images
+                                for (int i = 0; i < sHDRShotsPaths.size()-1; i++) {
+                                    Storage.deleteImage(mContentResolver, sHDRShotsPaths.get(i));
+                                }
+
+                                // reset exposure
+                                mParameters.setExposureCompensation(CameraSettings.readExposure(mPreferences));
+                                mCameraDevice.setParameters(mParameters);
+
+                                mHdrProgressDialog.dismiss();
+                                mHDRRendering = false;
+                            }
+                        }.start();
+                    }
+                }, 1000);
+                return;
+            }
+
+            if (queueShot) {
+                mSnapshotOnIdle = false;
+                mHandler.postDelayed(new Runnable() {
+                    public void run() {
+                        mHDRExposureSet = true;
+                        onShutterButtonClick();
+                    }
+                }, Util.getSoftwareHDRExposureSettleTime());
+                return;
+            }
+        }
+
         if (mPaused || collapseCameraControls()
                 || (mCameraState == SWITCHING_CAMERA)
                 || (mCameraState == PREVIEW_STOPPED)) return;
@@ -1644,9 +1775,16 @@ public class PhotoModule
         mFocusManager.doSnap();
         mBurstShotsDone++;
 
-        if (mBurstShotsDone == nbBurstShots) {
-            mBurstShotsDone = 0;
-            mSnapshotOnIdle = false;
+        if (mHDRShotInProgress) {
+            mHDRExposureSet = false;
+            mSnapshotOnIdle = true;
+        }
+
+        if (mBurstShotsDone >= nbBurstShots) {
+            if (!mHDRShotInProgress) {
+                mBurstShotsDone = 0;
+                mSnapshotOnIdle = false;
+            }
         } else if (mSnapshotOnIdle == false) {
             // queue a new shot until we done all our shots
             mSnapshotOnIdle = true;
@@ -1837,9 +1975,9 @@ public class PhotoModule
     }
 
     /**
-     * The focus manager is the first UI related element to get initialized,
-     * and it requires the RenderOverlay, so initialize it here
-     */
+* The focus manager is the first UI related element to get initialized,
+* and it requires the RenderOverlay, so initialize it here
+*/
     private void initializeFocusManager() {
         // Create FocusManager object. startPreview needs it.
         mRenderOverlay = (RenderOverlay) mRootView.findViewById(R.id.render_overlay);
@@ -1908,7 +2046,7 @@ public class PhotoModule
         }
         initializeRenderOverlay();
         onFullScreenChanged(mActivity.isInCameraApp());
-        if (mJpegImageData != null) {  // Jpeg data found, picture has been taken.
+        if (mJpegImageData != null) { // Jpeg data found, picture has been taken.
             showPostCaptureAlert();
         }
     }
@@ -2034,6 +2172,18 @@ public class PhotoModule
                     onShutterButtonFocus(true);
                 }
                 return true;
+            case KeyEvent.KEYCODE_VOLUME_UP:
+                if (mParameters.isZoomSupported() && mZoomRenderer != null) {
+                    int index = mZoomValue + 1;
+                    processZoomValueChanged(index);
+                }
+                return true;
+            case KeyEvent.KEYCODE_VOLUME_DOWN:
+                if (mParameters.isZoomSupported() && mZoomRenderer != null) {
+                    int index = mZoomValue - 1;
+                    processZoomValueChanged(index);
+                }
+                return true;
         }
         return false;
     }
@@ -2054,6 +2204,12 @@ public class PhotoModule
                     onShutterButtonClick();
                 }
                 return true;
+            case KeyEvent.KEYCODE_VOLUME_UP:
+            case KeyEvent.KEYCODE_VOLUME_DOWN:
+                if (mParameters.isZoomSupported() && mZoomRenderer != null) {
+                    return true;
+                }
+                break;
         }
         return false;
     }
@@ -2152,7 +2308,7 @@ public class PhotoModule
         CameraSettings.setVideoMode(mParameters, false);
         mCameraDevice.setParameters(mParameters);
 
-        if (mSnapshotOnIdle && mBurstShotsDone > 0) {
+        if (mSnapshotOnIdle && (mBurstShotsDone > 0 && !mHDRShotInProgress)) {
             mHandler.post(mDoSnapRunnable);
         }
     }
@@ -2272,11 +2428,18 @@ public class PhotoModule
         String hdr = mPreferences.getString(CameraSettings.KEY_CAMERA_HDR,
                 mActivity.getString(R.string.pref_camera_hdr_default));
         if (mActivity.getString(R.string.setting_on_value).equals(hdr)) {
-            mSceneMode = Util.SCENE_MODE_HDR;
+            if (!Util.useSoftwareHDR())
+                mSceneMode = Util.SCENE_MODE_HDR;
+            else
+                Util.setDoSoftwareHDRShot(true);
         } else {
-            mSceneMode = mPreferences.getString(
-                CameraSettings.KEY_SCENE_MODE,
-                mActivity.getString(R.string.pref_camera_scenemode_default));
+            if (!Util.useSoftwareHDR()) {
+                mSceneMode = mPreferences.getString(
+                    CameraSettings.KEY_SCENE_MODE,
+                    mActivity.getString(R.string.pref_camera_scenemode_default));
+            } else {
+                Util.setDoSoftwareHDRShot(false);
+            }
         }
         if (Util.isSupported(mSceneMode, mParameters.getSupportedSceneModes())) {
             if (!mParameters.getSceneMode().equals(mSceneMode)) {
@@ -2326,13 +2489,15 @@ public class PhotoModule
         }
 
         // Set exposure compensation
-        int value = CameraSettings.readExposure(mPreferences);
-        int max = mParameters.getMaxExposureCompensation();
-        int min = mParameters.getMinExposureCompensation();
-        if (value >= min && value <= max) {
-            mParameters.setExposureCompensation(value);
-        } else {
-            Log.w(TAG, "invalid exposure range: " + value);
+        if (!mHDRShotInProgress) {
+            int value = CameraSettings.readExposure(mPreferences);
+            int max = mParameters.getMaxExposureCompensation();
+            int min = mParameters.getMinExposureCompensation();
+            if (value >= min && value <= max) {
+                mParameters.setExposureCompensation(value);
+            } else {
+                Log.w(TAG, "invalid exposure range: " + value);
+            }
         }
 
         if (Parameters.SCENE_MODE_AUTO.equals(mSceneMode)) {
@@ -2368,6 +2533,11 @@ public class PhotoModule
             // Set focus mode.
             mFocusManager.overrideFocusMode(null);
             mParameters.setFocusMode(mFocusManager.getFocusMode());
+
+            // Set focus time.
+            mFocusManager.setFocusTime(Integer.valueOf(
+                    mPreferences.getString(CameraSettings.KEY_FOCUS_TIME,
+                    mActivity.getString(R.string.pref_camera_focustime_default))));
         } else {
             mFocusManager.overrideFocusMode(mParameters.getFocusMode());
         }
