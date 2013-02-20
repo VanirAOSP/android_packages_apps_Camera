@@ -846,7 +846,6 @@ public class Util {
                 mLastDate = dateTaken;
                 mSameSecondCount = 0;
             }
-
             return result;
         }
     }

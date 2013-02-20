@@ -59,6 +59,7 @@ public class PreviewGestures
     private boolean mEnabled;
     private boolean mZoomOnly;
     private int mOrientation;
+    private int[] mLocation;
 
     private Handler mHandler = new Handler() {
         public void handleMessage(Message msg) {
@@ -71,11 +72,9 @@ public class PreviewGestures
     };
 
     public PreviewGestures(CameraActivity ctx, CameraModule module,
-            RenderOverlay overlay, ZoomRenderer zoom,
-            PieRenderer pie) {
+            ZoomRenderer zoom, PieRenderer pie) {
         mActivity = ctx;
         mModule = module;
-        mOverlay = overlay;
         mPie = pie;
         mZoom = zoom;
         mMode = MODE_ALL;
@@ -88,10 +87,6 @@ public class PreviewGestures
 
     public void setRenderOverlay(RenderOverlay overlay) {
         mOverlay = overlay;
-    }
-
-    public void setOrientation(int orientation) {
-        mOrientation = orientation;
     }
 
     public void setOrientation(int orientation) {
@@ -122,13 +117,6 @@ public class PreviewGestures
         }
     }
 
-    public void addTouchReceiver(View v) {
-        if (mReceivers == null) {
-            mReceivers = new ArrayList<View>();
-        }
-        mReceivers.add(v);
-    }
-
     public boolean dispatchTouch(MotionEvent m) {
         if (!mEnabled) {
             return mActivity.superDispatchTouchEvent(m);
@@ -141,7 +129,10 @@ public class PreviewGestures
             } else {
                 mMode = MODE_ALL;
                 mDown = MotionEvent.obtain(m);
-
+                if (mPie != null && mPie.showsItems()) {
+                    mMode = MODE_PIE;
+                    return sendToPie(m);
+                }
                 if (mPie != null && !mZoomOnly) {
                     mHandler.sendEmptyMessageDelayed(MSG_PIE, TIMEOUT_PIE);
                 }
@@ -164,7 +155,12 @@ public class PreviewGestures
             }
             return true;
         } else if (mMode == MODE_ZOOM) {
-            return mScale.onTouchEvent(m);
+            mScale.onTouchEvent(m);
+            if (!mScale.isInProgress() && MotionEvent.ACTION_POINTER_UP == m.getActionMasked()) {
+                mMode = MODE_NONE;
+                onScaleEnd(mScale);
+            }
+            return true;
         } else if (mMode == MODE_MODULE) {
             return mActivity.superDispatchTouchEvent(m);
         } else {
@@ -214,7 +210,7 @@ public class PreviewGestures
                         || Math.abs(m.getY() - mDown.getY()) > mSlop) {
                     // moved too far and no timeout yet, no focus or pie
                     cancelPie();
-                    if (isSwipe(m)) {
+                    if (isSwipe(m, true)) {
                         mMode = MODE_MODULE;
                         return mActivity.superDispatchTouchEvent(m);
                     } else {
@@ -244,29 +240,40 @@ public class PreviewGestures
         return false;
     }
 
-    private boolean isSwipe(MotionEvent m) {
+    // left tests for finger moving right to left
+    private boolean isSwipe(MotionEvent m, boolean left) {
         float dx = 0;
+        float dy = 0;
         switch (mOrientation) {
         case 0:
             dx = m.getX() - mDown.getX();
-          return (dx < 0 && Math.abs(m.getY() - mDown.getY()) / -dx < 0.6f);
+            dy = Math.abs(m.getY() - mDown.getY());
+            break;
         case 90:
             dx = - (m.getY() - mDown.getY());
-            return (dx < 0 && Math.abs(m.getX() - mDown.getX()) / -dx < 0.6f);
+            dy = Math.abs(m.getX() - mDown.getX());
+            break;
         case 180:
             dx = -(m.getX() - mDown.getX());
-            return (dx < 0 && Math.abs(m.getY() - mDown.getY()) / -dx < 0.6f);
+            dy = Math.abs(m.getY() - mDown.getY());
+            break;
         case 270:
             dx = m.getY() - mDown.getY();
-            return (dx < 0 && Math.abs(m.getX() - mDown.getX()) / -dx < 0.6f);
+            dy = Math.abs(m.getX() - mDown.getX());
+            break;
         }
-        return false;
+        if (left) {
+            return (dx < 0 && dy / -dx < 0.6f);
+        } else {
+            return (dx > 0 && dy / dx < 0.6f);
+        }
     }
 
     private boolean isInside(MotionEvent evt, View v) {
+        v.getLocationInWindow(mLocation);
         return (v.getVisibility() == View.VISIBLE
-                && evt.getX() >= v.getLeft() && evt.getX() < v.getRight()
-                && evt.getY() >= v.getTop() && evt.getY() < v.getBottom());
+                && evt.getX() >= mLocation[0] && evt.getX() < mLocation[0] + v.getWidth()
+                && evt.getY() >= mLocation[1] && evt.getY() < mLocation[1] + v.getHeight());
     }
 
     public void cancelActivityTouchHandling(MotionEvent m) {

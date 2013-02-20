@@ -65,11 +65,6 @@ public class RenderOverlay extends FrameLayout {
         }
     }
 
-    @Override
-    public void setOrientation(int orientation, boolean animation) {
-        super.setOrientation(orientation, animation);
-    }
-
     public void addRenderer(int pos, Renderer renderer) {
         mClients.add(pos, renderer);
         renderer.setOverlay(this);
@@ -143,7 +138,7 @@ public class RenderOverlay extends FrameLayout {
         @Override
         public void layout(int left, int top, int right, int bottom) {
             adjustPosition();
-            super.layout(left,  top, right, bottom);
+            super.layout(left, top, right, bottom);
             if (mClients == null) return;
             for (Renderer renderer : mClients) {
                 renderer.layout(left, top, right, bottom);
@@ -164,5 +159,4 @@ public class RenderOverlay extends FrameLayout {
             }
         }
     }
-
 }

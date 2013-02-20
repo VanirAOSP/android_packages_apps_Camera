@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+
 package com.android.camera;
 
 import static com.android.camera.Util.Assert;
@@ -126,9 +127,9 @@ public class CameraManager {
         }
 
         /*
-         * This method does not deal with the build version check.  Everyone should
-         * check first before sending message to this handler.
-         */
+* This method does not deal with the build version check. Everyone should
+* check first before sending message to this handler.
+*/
         @Override
         public void handleMessage(final Message msg) {
             try {
@@ -158,7 +159,7 @@ public class CameraManager {
 
                     case SET_PREVIEW_TEXTURE_ASYNC:
                         setPreviewTexture(msg.obj);
-                        return;  // no need to call mSig.open()
+                        return; // no need to call mSig.open()
 
                     case SET_PREVIEW_DISPLAY_ASYNC:
                         try {
@@ -166,11 +167,11 @@ public class CameraManager {
                         } catch(IOException e) {
                             throw new RuntimeException(e);
                         }
-                        return;  // no need to call mSig.open()
+                        return; // no need to call mSig.open()
 
                     case START_PREVIEW_ASYNC:
                         mCamera.startPreview();
-                        return;  // no need to call mSig.open()
+                        return; // no need to call mSig.open()
 
                     case STOP_PREVIEW:
                         mCamera.stopPreview();
@@ -232,7 +233,7 @@ public class CameraManager {
 
                     case SET_PARAMETERS_ASYNC:
                         mCamera.setParameters((Parameters) msg.obj);
-                        return;  // no need to call mSig.open()
+                        return; // no need to call mSig.open()
 
                     case SET_PREVIEW_CALLBACK:
                         mCamera.setPreviewCallback((PreviewCallback) msg.obj);
@@ -389,27 +390,6 @@ public class CameraManager {
                 @Override
                 public void run() {
                     mCamera.takePicture(shutter, raw, postview, jpeg);
-                    mSig.open();
-                }
-            });
-            mSig.block();
-        }
-
-        public void takePicture2(final ShutterCallback shutter, final PictureCallback raw,
-                final PictureCallback postview, final PictureCallback jpeg,
-                final int cameraState, final int focusState) {
-            mSig.close();
-            // Too many parameters, so use post for simplicity
-            mCameraHandler.post(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        mCamera.takePicture(shutter, raw, postview, jpeg);
-                    } catch (RuntimeException e) {
-                        Log.w(TAG, "take picture failed; cameraState:" + cameraState
-                            + ", focusState:" + focusState);
-                        throw e;
-                    }
                     mSig.open();
                 }
             });
