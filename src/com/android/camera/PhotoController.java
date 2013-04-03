@@ -96,7 +96,6 @@ public class PhotoController extends PieController
             mRenderer.addItem(hdr);
         }
         mOtherKeys = new String[] {
-                CameraSettings.KEY_STORAGE,
                 CameraSettings.KEY_SCENE_MODE,
                 CameraSettings.KEY_RECORD_LOCATION,
                 CameraSettings.KEY_POWER_SHUTTER,
