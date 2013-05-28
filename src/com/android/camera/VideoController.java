@@ -61,7 +61,7 @@ public class VideoController extends PieController
         addItem(CameraSettings.KEY_WHITE_BALANCE, 3 * FLOAT_PI_DIVIDED_BY_TWO + sweep, sweep);
         if (group.findPreference(CameraSettings.KEY_CAMERA_ID) != null) {
             PieItem item = makeItem(R.drawable.ic_switch_video_facing_holo_light);
-            item.setFixedSlice(FLOAT_PI_DIVIDED_BY_TWO + sweep, sweep);
+            item.setFixedSlice(FLOAT_PI_DIVIDED_BY_TWO + sweep,  sweep);
             item.setOnClickListener(new OnClickListener() {
 
                 @Override
@@ -80,6 +80,7 @@ public class VideoController extends PieController
             mRenderer.addItem(item);
         }
         mOtherKeys = new String[] {
+                CameraSettings.KEY_STORAGE,
                 CameraSettings.KEY_VIDEO_EFFECT,
                 CameraSettings.KEY_VIDEO_TIME_LAPSE_FRAME_INTERVAL,
                 CameraSettings.KEY_VIDEO_QUALITY,

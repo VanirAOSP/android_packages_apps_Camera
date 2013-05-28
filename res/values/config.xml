@@ -31,6 +31,7 @@ for different hardware or product builds. -->
     <bool name="needsEarlyVideoSize">false</bool>
     <!-- The camera removes the focus modes by default when touch-to-focus
 exists. Use this option to change that behavior -->
+
     <bool name="wantsFocusModes">false</bool>
     <!-- Always use preferred preview size path for effects recording instead of the display resolution -->
     <bool name="usePreferredPreviewSizeForEffects">false</bool>

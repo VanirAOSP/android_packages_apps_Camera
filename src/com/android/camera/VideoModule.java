@@ -233,7 +233,8 @@ public class VideoModule implements CameraModule,
     private int mZoomValue; // The current zoom value.
     private int mZoomMax;
     private List<Integer> mZoomRatios;
-    private boolean mRestoreFlash; // This is used to check if we need to restore the flash
+    private boolean mZoomSetByKey = false;
+    private boolean mRestoreFlash;  // This is used to check if we need to restore the flash
                                     // status when going back from gallery.
 
     private int mVideoWidth;
@@ -425,6 +426,8 @@ public class VideoModule implements CameraModule,
 
         mPreferences.setLocalId(mActivity, mCameraId);
         CameraSettings.upgradeLocalPreferences(mPreferences.getLocal());
+
+        mActivity.setStoragePath(mPreferences);
 
         mActivity.mNumberOfCameras = CameraHolder.instance().getNumberOfCameras();
         mPrefVideoEffectDefault = mActivity.getString(R.string.pref_video_effect_default);
@@ -1443,7 +1446,7 @@ public class VideoModule implements CameraModule,
         // Used when emailing.
         String filename = title + convertOutputFormatToFileExt(outputFileFormat);
         String mime = convertOutputFormatToMimeType(outputFileFormat);
-        String path = Storage.DIRECTORY + '/' + filename;
+        String path = Storage.getStorage().generateDirectory() + '/' + filename;
         String tmpPath = path + ".tmp";
         mCurrentVideoValues = new ContentValues(7);
         mCurrentVideoValues.put(Video.Media.TITLE, title);
@@ -2341,6 +2344,11 @@ public class VideoModule implements CameraModule,
             // Check if the current effects selection has changed
             if (updateEffectSelection()) return;
 
+            if (mActivity.setStoragePath(mPreferences)) {
+                mActivity.updateStorageSpaceAndHint();
+                mActivity.reuseCameraScreenNail(!mIsVideoCaptureIntent);
+            }
+
             readVideoPreferences();
             showTimeLapseUI(mCaptureTimeLapse);
             // We need to restart the preview if preview size is changed.
@@ -2502,17 +2510,35 @@ public class VideoModule implements CameraModule,
         return false;
     }
 
-    private void processZoomValueChanged(int index) {
+    private void processZoomValueChanged(int index){
         if (index >= 0 && index <= mZoomMax) {
-            mZoomRenderer.setZoom(index);
+             processZoomValueChanged(index,true);
+             mZoomSetByKey = true;
+        }
+    }
+
+    private void processZoomValueChanged(int index, boolean fromKey) {
+
+        if(fromKey || (!fromKey && !mZoomSetByKey)){
             // Not useful to change zoom value when the activity is paused.
             if (mPaused) return;
             mZoomValue = index;
             // Set zoom parameters asynchronously
             mParameters.setZoom(mZoomValue);
             mActivity.mCameraDevice.setParametersAsync(mParameters);
-            Parameters p = mActivity.mCameraDevice.getParameters();
-            mZoomRenderer.setZoomValue(mZoomRatios.get(p.getZoom()));
+            if (mZoomRenderer != null) {
+                Parameters p = mActivity.mCameraDevice.getParameters();
+                mZoomRenderer.setZoomValue(mZoomRatios.get(p.getZoom()));
+            }
+        }else{
+            mZoomSetByKey = false;
+        }
+    }
+
+    private class ZoomChangeListener implements ZoomRenderer.OnZoomChangedListener {
+        @Override
+        public void onZoomValueChanged(int index) {
+            processZoomValueChanged(index,false);
         }
     }
 
@@ -2684,7 +2710,7 @@ public class VideoModule implements CameraModule,
         String title = Util.createJpegName(dateTaken);
         int orientation = Exif.getOrientation(data);
         Size s = mParameters.getPictureSize();
-        Uri uri = Storage.addImage(mContentResolver, title, dateTaken, loc, orientation, data,
+        Uri uri = Storage.getStorage().addImage(mContentResolver, title, dateTaken, loc, orientation, data,
                 s.width, s.height);
         if (uri != null) {
             Util.broadcastNewPicture(mActivity, uri);

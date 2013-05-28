@@ -126,6 +126,10 @@
     <string name="effect_backdropper_space" msgid="7935661090723068402">"Im All"</string>
     <string name="effect_backdropper_sunset" msgid="45198943771777870">"Sonnenuntergang"</string>
     <string name="effect_backdropper_gallery" msgid="959158844620991906">"Mein Video"</string>
+    <string name="bg_replacement_message" msgid="9184270738916564608">"Legen Sie Ihr Gerät ab."\n"Treten Sie für einen kurzen Moment aus dem Aufnahmebereich."</string>
+    <string name="video_snapshot_hint" msgid="18833576851372483">"Berühren, um ein Foto während der Aufnahme zu machen."</string>
+    <string name="disable_video_snapshot_hint" msgid="4957723267826476079">"Video-Schnappschüsse sind bei Verwendung von Spezialeffekten nicht möglich."</string>
+    <string name="clear_effects" msgid="5485339175014139481">"Effekte löschen"</string>
     <string name="effect_silly_faces" msgid="8107732405347155777">"Lustige Gesichter"</string>
     <string name="effect_background" msgid="6579360207378171022">"Hintergrund"</string>
     <string name="clear_effects" msgid="5485339175014139481">"Effekte löschen"</string>
