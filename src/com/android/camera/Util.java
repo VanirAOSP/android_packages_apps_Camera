@@ -168,9 +168,6 @@ public class Util {
     // Do not change the focus mode when TTF is used
     private static boolean sNoFocusModeChangeForTouch;
 
-    // Send magic command to hardware for Samsung ZSL
-    private static boolean sSendMagicSamsungZSLCommand;
-
     private static SpeechRecognizer mSpeechRecognizer;
     private static Intent mSpeechRecognizerIntent;
     private static String[] mShutterWords;
@@ -208,9 +205,6 @@ public class Util {
 
         sNoFocusModeChangeForTouch = context.getResources().getBoolean(
                 R.bool.useContinuosFocusForTouch);
-
-        sSendMagicSamsungZSLCommand = context.getResources().getBoolean(
-                R.bool.sendMagicSamsungZSLCommand);
 
         /* Voice Shutter */
         mSpeechRecognizer = SpeechRecognizer.createSpeechRecognizer(context);
@@ -277,10 +271,6 @@ public class Util {
 
     public static boolean noFocusModeChangeForTouch() {
         return sNoFocusModeChangeForTouch;
-    }
-
-    public static boolean sendMagicSamsungZSLCommand() {
-        return sSendMagicSamsungZSLCommand;
     }
 
     public static void enableSpeechRecognition(boolean enable, PhotoModule module) {
