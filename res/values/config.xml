@@ -15,7 +15,7 @@
 -->
 
 <!-- Camera app resources that may need to be customized
-for different hardware or product builds. -->
+     for different hardware or product builds. -->
 <resources>
     <!-- Maximum recording length in milliseconds. 0 means unlimited. -->
     <integer name="max_video_recording_length">0</integer>
@@ -30,13 +30,12 @@ for different hardware or product builds. -->
     <!-- Allows setting video size before recording starts -->
     <bool name="needsEarlyVideoSize">false</bool>
     <!-- The camera removes the focus modes by default when touch-to-focus
-exists. Use this option to change that behavior -->
-
+         exists. Use this option to change that behavior -->
     <bool name="wantsFocusModes">false</bool>
     <!-- Always use preferred preview size path for effects recording instead of the display resolution -->
     <bool name="usePreferredPreviewSizeForEffects">false</bool>
     <!-- Ignore preferred preview size and use best value from supported preview sizes
-Setting both this and the above option true will always use values from preview sizes for both -->
+         Setting both this and the above option true will always use values from preview sizes for both -->
     <bool name="ignorePreferredPreviewSizeForVideo">false</bool>
     <!-- Disable face detection on the front camera -->
     <bool name="noFaceDetectOnFrontCamera">false</bool>
@@ -46,4 +45,9 @@ Setting both this and the above option true will always use values from preview 
     <bool name="disableSoftwareHDR">false</bool>
     <!-- Time needed for exposure change to be effective for Software HDR (ms) -->
     <integer name="softwareHDRExposureSettleTime">800</integer>
+    <!-- Stay in continuous focus even if touch-to-focus is used
+         This option doesn't make sense if wantsFocusModes is on -->
+    <bool name="useContinuosFocusForTouch">false</bool>
+    <!-- Magic for enabling ZSL on Samsung cameras -->
+    <bool name="sendMagicSamsungZSLCommand">false</bool>
 </resources>

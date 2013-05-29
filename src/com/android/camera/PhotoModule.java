@@ -152,7 +152,7 @@ public class PhotoModule
 
     private static final int SCREEN_DELAY = 2 * 60 * 1000;
 
-    private int mZoomValue; // The current zoom value.
+    private int mZoomValue;  // The current zoom value.
     private int mZoomMax;
     private List<Integer> mZoomRatios;
     private boolean mZoomSetByKey = false;
@@ -225,11 +225,11 @@ public class PhotoModule
     private final Object[] mFormatterArgs = new Object[1];
 
     /**
-* An unpublished intent flag requesting to return as soon as capturing
-* is completed.
-*
-* TODO: consider publishing by moving into MediaStore.
-*/
+     * An unpublished intent flag requesting to return as soon as capturing
+     * is completed.
+     *
+     * TODO: consider publishing by moving into MediaStore.
+     */
     private static final String EXTRA_QUICK_CAPTURE =
             "android.intent.extra.quickCapture";
 
@@ -246,7 +246,7 @@ public class PhotoModule
     private boolean mIsImageCaptureIntent;
 
     private static final int PREVIEW_STOPPED = 0;
-    private static final int IDLE = 1; // preview is active
+    private static final int IDLE = 1;  // preview is active
     // Focus is in progress. The exact focus state is in Focus.java.
     private static final int FOCUSING = 2;
     private static final int SNAPSHOT_IN_PROGRESS = 3;
@@ -364,9 +364,9 @@ public class PhotoModule
     }
 
     /**
-* This Handler is used to post message back onto the main thread of the
-* application
-*/
+     * This Handler is used to post message back onto the main thread of the
+     * application
+     */
     private class MainHandler extends Handler {
         @Override
         public void handleMessage(Message msg) {
@@ -738,13 +738,6 @@ public class PhotoModule
         @Override
         public void onZoomValueChanged(int index) {
             processZoomValueChanged(index,false);
-        }
-    }
-
-    private class ZoomChangeListener implements ZoomRenderer.OnZoomChangedListener {
-        @Override
-        public void onZoomValueChanged(int index) {
-            processZoomValueChanged(index);
         }
 
         @Override
@@ -1166,7 +1159,7 @@ public class PhotoModule
             r.data = data;
             r.uri = uri;
             r.title = title;
-            r.loc = (loc == null) ? null : new Location(loc); // make a copy
+            r.loc = (loc == null) ? null : new Location(loc);  // make a copy
             r.width = width;
             r.height = height;
             r.orientation = orientation;
@@ -1179,7 +1172,7 @@ public class PhotoModule
                     }
                 }
                 mQueue.add(r);
-                notifyAll(); // Tell saver thread there is new work to do.
+                notifyAll();  // Tell saver thread there is new work to do.
             }
         }
 
@@ -1190,7 +1183,7 @@ public class PhotoModule
                 SaveRequest r;
                 synchronized (this) {
                     if (mQueue.isEmpty()) {
-                        notifyAll(); // notify main thread in waitDone
+                        notifyAll();  // notify main thread in waitDone
 
                         // Note that we can only stop after we saved all images
                         // in the queue.
@@ -1209,7 +1202,7 @@ public class PhotoModule
                         r.orientation);
                 synchronized (this) {
                     mQueue.remove(0);
-                    notifyAll(); // the main thread may wait in addImage
+                    notifyAll();  // the main thread may wait in addImage
                 }
             }
         }
@@ -1522,12 +1515,12 @@ public class PhotoModule
     private void overrideCameraSettings(final String flashMode,
             final String whiteBalance, final String focusMode) {
         if (mPhotoControl != null) {
-// mPieControl.enableFilter(true);
+//            mPieControl.enableFilter(true);
             mPhotoControl.overrideSettings(
                     CameraSettings.KEY_FLASH_MODE, flashMode,
                     CameraSettings.KEY_WHITE_BALANCE, whiteBalance,
                     CameraSettings.KEY_FOCUS_MODE, focusMode);
-// mPieControl.enableFilter(false);
+//            mPieControl.enableFilter(false);
         }
     }
 
@@ -1610,7 +1603,7 @@ public class PhotoModule
         byte[] data = mJpegImageData;
 
         if (mCropValue == null) {
-            // First handle the no crop case -- just return the value. If the
+            // First handle the no crop case -- just return the value.  If the
             // caller specifies a "save uri" then write the data to its
             // stream. Otherwise, pass back a scaled down version of the bitmap
             // directly in the extras.
@@ -2089,9 +2082,9 @@ public class PhotoModule
     }
 
     /**
-* The focus manager is the first UI related element to get initialized,
-* and it requires the RenderOverlay, so initialize it here
-*/
+     * The focus manager is the first UI related element to get initialized,
+     * and it requires the RenderOverlay, so initialize it here
+     */
     private void initializeFocusManager() {
         // Create FocusManager object. startPreview needs it.
         mRenderOverlay = (RenderOverlay) mRootView.findViewById(R.id.render_overlay);
@@ -2160,7 +2153,7 @@ public class PhotoModule
         }
         initializeRenderOverlay();
         onFullScreenChanged(mActivity.isInCameraApp());
-        if (mJpegImageData != null) { // Jpeg data found, picture has been taken.
+        if (mJpegImageData != null) {  // Jpeg data found, picture has been taken.
             showPostCaptureAlert();
         }
     }
