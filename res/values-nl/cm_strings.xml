@@ -19,14 +19,22 @@
     <string name="pref_camera_picturesize_entry_12_8mp">12,8 megapixel</string>
     <string name="pref_camera_picturesize_entry_11_5mp">11,5 megapixel</string>
     <string name="pref_camera_picturesize_entry_9mp">9 megapixel</string>
+    <string name="pref_camera_picturesize_entry_7mp">7 megapixel</string>
     <string name="pref_camera_picturesize_entry_6_4mp">6,4 megapixel</string>
+    <string name="pref_camera_picturesize_entry_6mp">6 megapixel</string>
+    <string name="pref_camera_picturesize_entry_4_5mp">4,5 megapixel</string>
     <string name="pref_camera_picturesize_entry_4mp">4 megapixel</string>
+    <string name="pref_camera_picturesize_entry_3_7mp">3,7 megapixel</string>
     <string name="pref_camera_picturesize_entry_2_5mp">2,5 megapixel</string>
+    <string name="pref_camera_picturesize_entry_2_4mp">2,4 megapixel</string>
     <string name="pref_camera_picturesize_entry_2_1mp">2,1 megapixel</string>
+    <string name="pref_camera_picturesize_entry_1_9mp">1,9 megapixel</string>
     <string name="pref_camera_picturesize_entry_1_5mp">1,5 megapixel</string>
+    <string name="pref_camera_picturesize_entry_wxga">WXGA</string>
     <string name="pref_camera_picturesize_entry_xga">XGA</string>
     <string name="pref_camera_picturesize_entry_svga">SVGA</string>
     <string name="pref_camera_picturesize_entry_wvga">WVGA</string>
+    <string name="pref_camera_picturesize_entry_wqvga">WQVGA</string>
     <string name="pref_camera_focusmode_entry_continuouspicture">Doorlopend (foto)</string>
     <string name="pref_camera_focusmode_entry_continuousvideo">Doorlopend (video)</string>
     <string name="pref_camera_focusmode_entry_extended">Uitgebreid</string>
@@ -115,4 +123,9 @@
     <string name="pref_camera_timer_entry_60">60 sec.</string>
     <string name="voice_hint">Neem op afstand een foto door één van de volgende woorden te zeggen: \'Cid\', \'Whisky\' of \'Cheese\'</string>
     <string name="pref_nohands_persistent_title">Blijvend handsfree</string>
+<<<<<<< HEAD
 </resources>
+=======
+    <string name="pref_video_hdr">HDR</string>
+</resources>
+>>>>>>> cm

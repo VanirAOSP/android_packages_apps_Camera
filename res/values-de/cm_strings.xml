@@ -18,14 +18,22 @@
     <string name="pref_camera_picturesize_entry_12_8mp">12,8 Megapixel</string>
     <string name="pref_camera_picturesize_entry_11_5mp">11,5 Megapixel</string>
     <string name="pref_camera_picturesize_entry_9mp">9 Megapixel</string>
+    <string name="pref_camera_picturesize_entry_7mp">7 Megapixel</string>
     <string name="pref_camera_picturesize_entry_6_4mp">6,4 Megapixel</string>
+    <string name="pref_camera_picturesize_entry_6mp">6 Megapixel</string>
+    <string name="pref_camera_picturesize_entry_4_5mp">4,5 Megapixel</string>
     <string name="pref_camera_picturesize_entry_4mp">4 Megapixel</string>
+    <string name="pref_camera_picturesize_entry_3_7mp">3,7 Megapixel</string>
     <string name="pref_camera_picturesize_entry_2_5mp">2,5 Megapixel</string>
+    <string name="pref_camera_picturesize_entry_2_4mp">2,4 Megapixel</string>
     <string name="pref_camera_picturesize_entry_2_1mp">2,1 Megapixel</string>
+    <string name="pref_camera_picturesize_entry_1_9mp">1,9 Megapixel</string>
     <string name="pref_camera_picturesize_entry_1_5mp">1,5 Megapixel</string>
+    <string name="pref_camera_picturesize_entry_wxga">WXGA</string>
     <string name="pref_camera_picturesize_entry_xga">XGA</string>
     <string name="pref_camera_picturesize_entry_svga">SVGA</string>
     <string name="pref_camera_picturesize_entry_wvga">WVGA</string>
+    <string name="pref_camera_picturesize_entry_wqvga">WQVGA</string>
     <string name="pref_camera_focusmode_entry_continuouspicture">Kontinuierlich</string>
     <string name="pref_camera_focusmode_entry_continuousvideo">Kontinuierlich (Video)</string>
     <string name="pref_camera_focusmode_entry_extended">Erweitert</string>
@@ -115,4 +123,5 @@
     <string name="pref_camera_timer_entry_60">60 Sek.</string>
     <string name="voice_hint">Zum Auslösen aus der Ferne einfach \"Cheese\" sagen.</string>
     <string name="pref_nohands_persistent_title">Selbstausl. speichern</string>
+    <string name="pref_video_hdr">HDR</string>
 </resources>
