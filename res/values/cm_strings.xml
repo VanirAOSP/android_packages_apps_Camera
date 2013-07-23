@@ -152,6 +152,13 @@
     <string name="pref_camera_coloreffect_entry_redtint">Red tint</string>
     <string name="pref_camera_coloreffect_entry_bluetint">Blue tint</string>
     <string name="pref_camera_coloreffect_entry_greentint">Green tint</string>
+    <string name="pref_camera_coloreffect_entry_washed">Washed</string>
+    <string name="pref_camera_coloreffect_entry_vintage_warm">Vintage warm</string>
+    <string name="pref_camera_coloreffect_entry_vintage_cold">Vintage cold</string>
+    <string name="pref_camera_coloreffect_entry_point_blue">Point blue</string>
+    <string name="pref_camera_coloreffect_entry_point_green">Point green</string>
+    <string name="pref_camera_coloreffect_entry_point_red_yellow">Point red-yellow</string>
+    <string name="pref_camera_coloreffect_entry_cartoonize">Cartoonize</string>
 
     <!-- Settings screen, Burst mode title -->
     <string name="pref_camera_burst_title">Burst mode</string>
@@ -201,4 +208,25 @@
     <!-- Default HDR Video entry value -->
     <string name="pref_video_hdr_default" translatable="false">@string/setting_off_value</string>
     <string name="pref_video_hdr">HDR</string>
+
+    <!-- Shutter speed -->
+    <string name="pref_shutter_speed_title">Shutter speed</string>
+    <string name="pref_shutter_speed_default" translatable="false">auto</string>
+    <string name="pref_shutter_speed_entry_auto">Auto</string>
+    <string name="pref_shutter_speed_entry_0" translatable="false">1\"</string>
+    <string name="pref_shutter_speed_entry_1" translatable="false">1/2</string>
+    <string name="pref_shutter_speed_entry_2" translatable="false">1/4</string>
+    <string name="pref_shutter_speed_entry_3" translatable="false">1/8</string>
+    <string name="pref_shutter_speed_entry_4" translatable="false">1/16</string>
+    <string name="pref_shutter_speed_entry_5" translatable="false">1/32</string>
+    <string name="pref_shutter_speed_entry_6" translatable="false">1/100</string>
+    <string name="pref_shutter_speed_entry_7" translatable="false">1/125</string>
+    <string name="pref_shutter_speed_entry_8" translatable="false">1/250</string>
+    <string name="pref_shutter_speed_entry_9" translatable="false">1/500</string>
+    <string name="pref_shutter_speed_entry_10" translatable="false">1/1000</string>
+    <string name="pref_shutter_speed_entry_11" translatable="false">1/2000</string>
+    <string name="pref_shutter_speed_entry_12" translatable="false">1/3333</string>
+
+    <!-- Red eye flash mode title -->
+    <string name="pref_camera_flashmode_entry_redeye">Red eye</string>
 </resources>

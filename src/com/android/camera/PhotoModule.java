@@ -27,6 +27,8 @@ import android.content.Intent;
 import android.content.SharedPreferences.Editor;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera.CameraInfo;
 import android.hardware.Camera.Face;
@@ -76,6 +78,7 @@ import com.android.camera.ui.ZoomRenderer;
 import com.android.gallery3d.app.CropImage;
 import com.android.gallery3d.common.ApiHelper;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -314,6 +317,7 @@ public class PhotoModule
     private boolean mHDRRendering = false;
     private ProgressDialog mHdrProgressDialog = null;
     private static ArrayList<Uri> sHDRShotsPaths = new ArrayList<Uri>();
+    private int mResetExposure;
 
     // Camera timer.
     private boolean mTimerMode = false;
@@ -906,6 +910,8 @@ public class PhotoModule
                 mFlashIndicator.setImageResource(R.drawable.ic_indicator_flash_auto);
             } else if (Parameters.FLASH_MODE_ON.equals(value)) {
                 mFlashIndicator.setImageResource(R.drawable.ic_indicator_flash_on);
+            } else if (Parameters.FLASH_MODE_RED_EYE.equals(value)) {
+                mFlashIndicator.setImageResource(R.drawable.ic_indicator_flash_redeye);
             } else {
                 mFlashIndicator.setImageResource(R.drawable.ic_indicator_flash_off);
             }
@@ -1053,7 +1059,9 @@ public class PhotoModule
                 ((CameraScreenNail) mActivity.mCameraScreenNail).animateSlide();
             }
             mFocusManager.updateFocusUI(); // Ensure focus indicator is hidden.
-            if (!mIsImageCaptureIntent && !Util.enableZSL()) {
+            if (!mIsImageCaptureIntent && (!Util.enableZSL()
+                    || (mSceneMode == Util.SCENE_MODE_HDR
+                    && Util.needSamsungHDRFormat()))) {
                 if (ApiHelper.CAN_START_PREVIEW_IN_JPEG_CALLBACK) {
                     setupPreview();
                 } else {
@@ -1062,9 +1070,18 @@ public class PhotoModule
                     // time before starting the preview.
                     mHandler.sendEmptyMessageDelayed(SETUP_PREVIEW, 300);
                 }
-            } else {
-                mFocusManager.resetTouchFocus();
-                setCameraState(IDLE);
+            } else if (Util.enableZSL() && !(mSceneMode == Util.SCENE_MODE_HDR
+                        && Util.needSamsungHDRFormat())) {
+                // In ZSL mode, the preview is not stopped, due to which the
+                // review mode (ImageCapture) doesn't show the captured frame.
+                // Hence stop the preview if ZSL mode is active so that the
+                // preview can be restarted using the onReviewRetakeClicked().
+                if (mIsImageCaptureIntent) {
+                    stopPreview();
+                } else {
+                    mFocusManager.resetTouchFocus();
+                    setCameraState(IDLE);
+                }
             }
 
             if (!mIsImageCaptureIntent) {
@@ -1072,7 +1089,9 @@ public class PhotoModule
                 Size s = mParameters.getPictureSize();
                 int orientation = Exif.getOrientation(jpegData);
                 int width, height;
-                if ((mJpegRotation + orientation) % 180 == 0) {
+                if ((mJpegRotation + orientation) % 180 == 0
+                        || (mSceneMode == Util.SCENE_MODE_HDR
+                        && Util.needSamsungHDRFormat())) {
                     width = s.width;
                     height = s.height;
                 } else {
@@ -1108,6 +1127,9 @@ public class PhotoModule
             if (mSnapshotOnIdle && mBurstShotsDone > 0) {
                 mHandler.post(mDoSnapRunnable);
             }
+            // Reset exposure
+            mParameters.setExposureCompensation(mResetExposure);
+            mCameraDevice.setParameters(mParameters);
         }
     }
 
@@ -1217,6 +1239,26 @@ public class PhotoModule
                         continue;
                     }
                     r = mQueue.get(0);
+                }
+
+                if (mSceneMode == Util.SCENE_MODE_HDR && Util.needSamsungHDRFormat()) {
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                    Bitmap bm = Util.decodeYUV422P(r.data, r.width, r.height);
+                    if (mJpegRotation != 0) {
+                        Matrix matrix = new Matrix();
+                        matrix.postRotate(mJpegRotation);
+                        bm = Bitmap.createBitmap(bm, 0, 0, r.width, r.height, matrix, true);
+                    }
+                    if (mJpegRotation % 180 != 0) {
+                        int x=r.height;
+                        int y=r.width;
+                        r.width = x;
+                        r.height = y;
+                    }
+                    bm.compress(Bitmap.CompressFormat.JPEG, Integer.parseInt(mPreferences.getString(
+                            CameraSettings.KEY_JPEG, mActivity.getString(
+                            R.string.pref_camera_jpeg_default))), baos);
+                    r.data = baos.toByteArray();
                 }
                 storeImage(r.data, r.uri, r.title, r.loc, r.width, r.height,
                         r.orientation);
@@ -1405,7 +1447,13 @@ public class PhotoModule
             animateFlash();
         }
 
-        // Set rotation and gps data.
+        // Save data
+        mResetExposure = mParameters.getExposureCompensation();
+        // Set rotation and gps data
+        if (mSceneMode == Util.SCENE_MODE_HDR && Util.needSamsungHDRFormat()) {
+            // Samsung actually specifies max range via exposure compensation
+            mParameters.setExposureCompensation(mParameters.getMaxExposureCompensation());
+        }
         mJpegRotation = Util.getJpegRotation(mCameraId, mOrientation);
         mParameters.setRotation(mJpegRotation);
         Location loc = mLocationManager.getCurrentLocation();
@@ -1416,7 +1464,8 @@ public class PhotoModule
                 mPostViewPictureCallback, new JpegPictureCallback(loc),
                 mCameraState, mFocusManager.getFocusState());
 
-        if (Util.enableZSL()) {
+        if (Util.enableZSL() && (mSceneMode != Util.SCENE_MODE_HDR
+                || !Util.needSamsungHDRFormat())) {
             mRestartPreview = false;
         }
 
@@ -2622,6 +2671,12 @@ public class PhotoModule
             mParameters.setColorEffect(colorEffect);
         }
 
+        // Set shutter speed
+        String shutterSpeed = mPreferences.getString(
+                CameraSettings.KEY_SHUTTER_SPEED,
+                mActivity.getString(R.string.pref_shutter_speed_default));
+        mParameters.set("shutter-speed", shutterSpeed);
+
         // Set exposure compensation
         if (!mHDRShotInProgress) {
             int value = CameraSettings.readExposure(mPreferences);
@@ -2858,6 +2913,7 @@ public class PhotoModule
         setupPreview();
         loadCameraPreferences();
         initializePhotoControl();
+        mResetExposure = mParameters.getExposureCompensation();
 
         // from initializeFirstTime
         initializeZoom();
